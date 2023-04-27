@@ -5,16 +5,24 @@
  */
 package org.mapstruct.intellij.inspection;
 
-import java.util.*;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import com.intellij.codeInspection.LocalQuickFixOnPsiElement;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.*;
+import com.intellij.psi.JavaElementVisitor;
+import com.intellij.psi.JavaPsiFacade;
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiAnnotationMemberValue;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiClassObjectAccessExpression;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiElementVisitor;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiModifier;
+import com.intellij.psi.PsiModifierListOwner;
+import com.intellij.psi.PsiType;
+import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.impl.source.PsiClassReferenceType;
 import com.intellij.psi.util.PsiUtil;
 import org.jetbrains.annotations.Nls;
@@ -26,6 +34,15 @@ import org.mapstruct.intellij.settings.ProjectSettings;
 import org.mapstruct.intellij.util.MapStructVersion;
 import org.mapstruct.intellij.util.MapstructUtil;
 import org.mapstruct.intellij.util.TargetUtils;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.intellij.codeInsight.AnnotationUtil.findAnnotation;
 import static com.intellij.codeInsight.AnnotationUtil.getBooleanAttributeValue;
@@ -70,8 +87,8 @@ public class UnmappedTargetPropertiesInspection extends InspectionBase {
             if ( isBeanMappingIgnoreByDefault( method ) ) {
                 return;
             }
-            ReportingPolicy reportingPolicy = getReportingPolicy(method);
-            if(reportingPolicy == ReportingPolicy.IGNORE) {
+            ReportingPolicy reportingPolicy = getReportingPolicy( method );
+            if (reportingPolicy == ReportingPolicy.IGNORE) {
                 return;
             }
 
@@ -345,53 +362,55 @@ public class UnmappedTargetPropertiesInspection extends InspectionBase {
     }
 
     @NotNull
-    private static ReportingPolicy getReportingPolicy(@NotNull PsiMethod method) {
+    private static ReportingPolicy getReportingPolicy( @NotNull PsiMethod method ) {
         PsiClass containingClass = method.getContainingClass();
-        if(containingClass == null) {
+        if (containingClass == null) {
             return ReportingPolicy.WARN;
         }
-        PsiAnnotation mapperAnnotation =  containingClass.getAnnotation(MapstructUtil.MAPPER_ANNOTATION_FQN);
-        if(mapperAnnotation == null) {
+        PsiAnnotation mapperAnnotation = containingClass.getAnnotation( MapstructUtil.MAPPER_ANNOTATION_FQN );
+        if (mapperAnnotation == null) {
             return ReportingPolicy.WARN;
         }
 
-        PsiAnnotationMemberValue classAnnotationOverwrite = mapperAnnotation.findDeclaredAttributeValue("unmappedTargetPolicy");
-        if(classAnnotationOverwrite != null) {
-            return getReportingPolicyFromAnnotation(classAnnotationOverwrite);
+        PsiAnnotationMemberValue classAnnotationOverwrite =
+                mapperAnnotation.findDeclaredAttributeValue( "unmappedTargetPolicy" );
+        if (classAnnotationOverwrite != null) {
+            return getReportingPolicyFromAnnotation( classAnnotationOverwrite );
         }
-        return getReportingPolicyFromMapperConfig(mapperAnnotation);
+        return getReportingPolicyFromMapperConfig( mapperAnnotation );
     }
 
     @NotNull
-    private static ReportingPolicy getReportingPolicyFromMapperConfig(@NotNull PsiAnnotation mapperAnnotation) {
-        PsiAnnotationMemberValue configAnnotation = mapperAnnotation.findDeclaredAttributeValue("config");
-        if(!(configAnnotation instanceof PsiClassObjectAccessExpression)) {
+    private static ReportingPolicy getReportingPolicyFromMapperConfig( @NotNull PsiAnnotation mapperAnnotation ) {
+        PsiAnnotationMemberValue configAnnotation = mapperAnnotation.findDeclaredAttributeValue( "config" );
+        if (!(configAnnotation instanceof PsiClassObjectAccessExpression)) {
             return ReportingPolicy.WARN;
         }
         PsiTypeElement config = ((PsiClassObjectAccessExpression) configAnnotation).getOperand();
         PsiType configType = config.getType();
-        if(!(configType instanceof PsiClassReferenceType)) {
+        if (!(configType instanceof PsiClassReferenceType)) {
             return ReportingPolicy.WARN;
         }
         PsiClass configClass = ((PsiClassReferenceType) configType).resolve();
 
-        if(configClass == null) {
+        if (configClass == null) {
             return ReportingPolicy.WARN;
         }
-        PsiAnnotation mapperConfigAnnotation =  configClass.getAnnotation(MapstructUtil.MAPPER_CONFIG_ANNOTATION_FQN);
+        PsiAnnotation mapperConfigAnnotation = configClass.getAnnotation( MapstructUtil.MAPPER_CONFIG_ANNOTATION_FQN );
 
-        if(mapperConfigAnnotation == null) {
+        if (mapperConfigAnnotation == null) {
             return ReportingPolicy.WARN;
         }
-        PsiAnnotationMemberValue configValue = mapperConfigAnnotation.findDeclaredAttributeValue("unmappedTargetPolicy");
+        PsiAnnotationMemberValue configValue =
+                mapperConfigAnnotation.findDeclaredAttributeValue( "unmappedTargetPolicy" );
         if (configValue == null) {
             return ReportingPolicy.WARN;
         }
-        return getReportingPolicyFromAnnotation(configValue);
+        return getReportingPolicyFromAnnotation( configValue );
     }
 
     @NotNull
-    private static ReportingPolicy getReportingPolicyFromAnnotation(@NotNull PsiAnnotationMemberValue configValue) {
+    private static ReportingPolicy getReportingPolicyFromAnnotation( @NotNull PsiAnnotationMemberValue configValue ) {
         switch (configValue.getText()) {
             case "ReportingPolicy.IGNORE":
                 return ReportingPolicy.IGNORE;
