@@ -46,6 +46,7 @@ import com.intellij.psi.PsiReference;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
+import org.mapstruct.ReportingPolicy;
 
 import static com.intellij.codeInsight.AnnotationUtil.findAnnotation;
 import static com.intellij.codeInsight.AnnotationUtil.findDeclaredAttribute;
@@ -477,6 +478,31 @@ public class MapstructAnnotationUtils {
         }
 
         return findReferencedMappers( mapperConfigAnnotation );
+    }
+
+
+    /**
+     * Converts the configValue to ReportingPolicy enum. If no matching ReportingPolicy found, returns fallback.
+     * @param configValue The annotation value to convert to ReportingPolicy enum
+     * @param fallback the fallback value if no matching ReportingPolicy found
+     * @return the mapped ReportingPolicy enum
+     */
+    @NotNull
+    public static ReportingPolicy getReportingPolicyFromAnnotation( @NotNull PsiAnnotationMemberValue configValue,
+                                                                    @NotNull ReportingPolicy fallback) {
+        switch (configValue.getText()) {
+            case "IGNORE":
+            case "ReportingPolicy.IGNORE":
+                return ReportingPolicy.IGNORE;
+            case "ERROR":
+            case "ReportingPolicy.ERROR":
+                return ReportingPolicy.ERROR;
+            case "WARN":
+            case "ReportingPolicy.WARN":
+                return ReportingPolicy.WARN;
+            default:
+                return fallback;
+        }
     }
 
 }

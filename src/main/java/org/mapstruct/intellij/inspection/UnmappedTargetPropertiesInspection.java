@@ -47,6 +47,7 @@ import java.util.stream.Stream;
 import static com.intellij.codeInsight.AnnotationUtil.findAnnotation;
 import static com.intellij.codeInsight.AnnotationUtil.getBooleanAttributeValue;
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.addMappingAnnotation;
+import static org.mapstruct.intellij.util.MapstructAnnotationUtils.getReportingPolicyFromAnnotation;
 import static org.mapstruct.intellij.util.MapstructUtil.isInheritInverseConfiguration;
 import static org.mapstruct.intellij.util.MapstructUtil.isMapper;
 import static org.mapstruct.intellij.util.MapstructUtil.isMapperConfig;
@@ -375,7 +376,7 @@ public class UnmappedTargetPropertiesInspection extends InspectionBase {
         PsiAnnotationMemberValue classAnnotationOverwrite =
                 mapperAnnotation.findDeclaredAttributeValue( "unmappedTargetPolicy" );
         if (classAnnotationOverwrite != null) {
-            return getReportingPolicyFromAnnotation( classAnnotationOverwrite );
+            return getReportingPolicyFromAnnotation( classAnnotationOverwrite, ReportingPolicy.WARN );
         }
         return getReportingPolicyFromMapperConfig( mapperAnnotation );
     }
@@ -406,23 +407,7 @@ public class UnmappedTargetPropertiesInspection extends InspectionBase {
         if (configValue == null) {
             return ReportingPolicy.WARN;
         }
-        return getReportingPolicyFromAnnotation( configValue );
-    }
-
-    @NotNull
-    private static ReportingPolicy getReportingPolicyFromAnnotation( @NotNull PsiAnnotationMemberValue configValue ) {
-        switch (configValue.getText()) {
-            case "IGNORE":
-            case "ReportingPolicy.IGNORE":
-                return ReportingPolicy.IGNORE;
-            case "ERROR":
-            case "ReportingPolicy.ERROR":
-                return ReportingPolicy.ERROR;
-            case "WARN":
-            case "ReportingPolicy.WARN":
-            default:
-                return ReportingPolicy.WARN;
-        }
+        return getReportingPolicyFromAnnotation( configValue, ReportingPolicy.WARN );
     }
 
 }
