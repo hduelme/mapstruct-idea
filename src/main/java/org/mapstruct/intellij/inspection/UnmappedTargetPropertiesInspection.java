@@ -12,9 +12,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.JavaElementVisitor;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiAnnotationMemberValue;
 import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiClassObjectAccessExpression;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiFile;
@@ -22,8 +20,6 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiModifier;
 import com.intellij.psi.PsiModifierListOwner;
 import com.intellij.psi.PsiType;
-import com.intellij.psi.PsiTypeElement;
-import com.intellij.psi.impl.source.PsiClassReferenceType;
 import com.intellij.psi.util.PsiUtil;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
@@ -47,7 +43,6 @@ import java.util.stream.Stream;
 import static com.intellij.codeInsight.AnnotationUtil.findAnnotation;
 import static com.intellij.codeInsight.AnnotationUtil.getBooleanAttributeValue;
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.addMappingAnnotation;
-import static org.mapstruct.intellij.util.MapstructAnnotationUtils.getReportingPolicyFromAnnotation;
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.getReportingPolicyFromMethode;
 import static org.mapstruct.intellij.util.MapstructUtil.isInheritInverseConfiguration;
 import static org.mapstruct.intellij.util.MapstructUtil.isMapper;
@@ -89,7 +84,8 @@ public class UnmappedTargetPropertiesInspection extends InspectionBase {
             if ( isBeanMappingIgnoreByDefault( method ) ) {
                 return;
             }
-            ReportingPolicy reportingPolicy = getReportingPolicyFromMethode( method, "unmappedTargetPolicy", ReportingPolicy.WARN );
+            ReportingPolicy reportingPolicy =
+                    getReportingPolicyFromMethode( method, "unmappedTargetPolicy", ReportingPolicy.WARN );
             if (reportingPolicy == ReportingPolicy.IGNORE) {
                 return;
             }
