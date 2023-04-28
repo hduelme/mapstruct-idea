@@ -43,10 +43,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiModifierListOwner;
 import com.intellij.psi.PsiNameValuePair;
 import com.intellij.psi.PsiReference;
-import com.intellij.psi.PsiType;
-import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
-import com.intellij.psi.impl.source.PsiClassReferenceType;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
@@ -505,7 +502,8 @@ public class MapstructAnnotationUtils {
             return fallback;
         }
 
-        PsiAnnotationMemberValue classAnnotationOverwrite = mapperAnnotation.findDeclaredAttributeValue( attributeName );
+        PsiAnnotationMemberValue classAnnotationOverwrite = mapperAnnotation.findDeclaredAttributeValue(
+                attributeName );
         if (classAnnotationOverwrite != null) {
             return getReportingPolicyFromAnnotation( classAnnotationOverwrite, fallback );
         }
@@ -519,7 +517,8 @@ public class MapstructAnnotationUtils {
         if ( mapperConfigReference == null ) {
             return fallback;
         }
-        PsiAnnotation mapperConfigAnnotation = mapperConfigReference.getAnnotation( MapstructUtil.MAPPER_CONFIG_ANNOTATION_FQN );
+        PsiAnnotation mapperConfigAnnotation = mapperConfigReference.getAnnotation(
+                MapstructUtil.MAPPER_CONFIG_ANNOTATION_FQN );
 
         if (mapperConfigAnnotation == null) {
             return fallback;
