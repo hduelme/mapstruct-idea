@@ -412,10 +412,14 @@ public class UnmappedTargetPropertiesInspection extends InspectionBase {
     @NotNull
     private static ReportingPolicy getReportingPolicyFromAnnotation( @NotNull PsiAnnotationMemberValue configValue ) {
         switch (configValue.getText()) {
+            case "IGNORE":
             case "ReportingPolicy.IGNORE":
                 return ReportingPolicy.IGNORE;
+            case "ERROR":
             case "ReportingPolicy.ERROR":
                 return ReportingPolicy.ERROR;
+            case "WARN":
+            case "ReportingPolicy.WARN":
             default:
                 return ReportingPolicy.WARN;
         }
