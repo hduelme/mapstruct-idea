@@ -48,6 +48,7 @@ import static com.intellij.codeInsight.AnnotationUtil.findAnnotation;
 import static com.intellij.codeInsight.AnnotationUtil.getBooleanAttributeValue;
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.addMappingAnnotation;
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.getReportingPolicyFromAnnotation;
+import static org.mapstruct.intellij.util.MapstructAnnotationUtils.getReportingPolicyFromMethode;
 import static org.mapstruct.intellij.util.MapstructUtil.isInheritInverseConfiguration;
 import static org.mapstruct.intellij.util.MapstructUtil.isMapper;
 import static org.mapstruct.intellij.util.MapstructUtil.isMapperConfig;
@@ -88,7 +89,7 @@ public class UnmappedTargetPropertiesInspection extends InspectionBase {
             if ( isBeanMappingIgnoreByDefault( method ) ) {
                 return;
             }
-            ReportingPolicy reportingPolicy = getReportingPolicy( method );
+            ReportingPolicy reportingPolicy = getReportingPolicyFromMethode( method, "unmappedTargetPolicy", ReportingPolicy.WARN );
             if (reportingPolicy == ReportingPolicy.IGNORE) {
                 return;
             }
@@ -360,54 +361,6 @@ public class UnmappedTargetPropertiesInspection extends InspectionBase {
             annotationSupplier,
             false
         );
-    }
-
-    @NotNull
-    private static ReportingPolicy getReportingPolicy( @NotNull PsiMethod method ) {
-        PsiClass containingClass = method.getContainingClass();
-        if (containingClass == null) {
-            return ReportingPolicy.WARN;
-        }
-        PsiAnnotation mapperAnnotation = containingClass.getAnnotation( MapstructUtil.MAPPER_ANNOTATION_FQN );
-        if (mapperAnnotation == null) {
-            return ReportingPolicy.WARN;
-        }
-
-        PsiAnnotationMemberValue classAnnotationOverwrite =
-                mapperAnnotation.findDeclaredAttributeValue( "unmappedTargetPolicy" );
-        if (classAnnotationOverwrite != null) {
-            return getReportingPolicyFromAnnotation( classAnnotationOverwrite, ReportingPolicy.WARN );
-        }
-        return getReportingPolicyFromMapperConfig( mapperAnnotation );
-    }
-
-    @NotNull
-    private static ReportingPolicy getReportingPolicyFromMapperConfig( @NotNull PsiAnnotation mapperAnnotation ) {
-        PsiAnnotationMemberValue configAnnotation = mapperAnnotation.findDeclaredAttributeValue( "config" );
-        if (!(configAnnotation instanceof PsiClassObjectAccessExpression)) {
-            return ReportingPolicy.WARN;
-        }
-        PsiTypeElement config = ((PsiClassObjectAccessExpression) configAnnotation).getOperand();
-        PsiType configType = config.getType();
-        if (!(configType instanceof PsiClassReferenceType)) {
-            return ReportingPolicy.WARN;
-        }
-        PsiClass configClass = ((PsiClassReferenceType) configType).resolve();
-
-        if (configClass == null) {
-            return ReportingPolicy.WARN;
-        }
-        PsiAnnotation mapperConfigAnnotation = configClass.getAnnotation( MapstructUtil.MAPPER_CONFIG_ANNOTATION_FQN );
-
-        if (mapperConfigAnnotation == null) {
-            return ReportingPolicy.WARN;
-        }
-        PsiAnnotationMemberValue configValue =
-                mapperConfigAnnotation.findDeclaredAttributeValue( "unmappedTargetPolicy" );
-        if (configValue == null) {
-            return ReportingPolicy.WARN;
-        }
-        return getReportingPolicyFromAnnotation( configValue, ReportingPolicy.WARN );
     }
 
 }
