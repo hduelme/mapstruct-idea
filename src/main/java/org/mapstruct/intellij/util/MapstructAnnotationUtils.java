@@ -431,7 +431,7 @@ public class MapstructAnnotationUtils {
      * @return {@code true} if the {@code memberValue} is the {@link org.mapstruct.SubclassMapping}
      * {@link PsiAnnotation}, {@code false} otherwise
      */
-    private static boolean isSubclassMappingPsiAnnotation(PsiAnnotationMemberValue memberValue) {
+    public static boolean isSubclassMappingPsiAnnotation(PsiAnnotationMemberValue memberValue) {
         return memberValue instanceof PsiAnnotation psiAnnotation && isSubclassMappingAnnotation( psiAnnotation );
     }
 
@@ -451,7 +451,7 @@ public class MapstructAnnotationUtils {
      * @return {@code true} if the {@code memberValue} is the {@link org.mapstruct.SubclassMappings}
      * {@link PsiAnnotation}, {@code false} otherwise
      */
-    private static boolean isSubclassMappingsPsiAnnotation(PsiAnnotationMemberValue memberValue) {
+    public static boolean isSubclassMappingsPsiAnnotation(PsiAnnotationMemberValue memberValue) {
         return memberValue instanceof PsiAnnotation psiAnnotation && isSubclassMappingsAnnotation( psiAnnotation );
     }
 
@@ -684,14 +684,18 @@ public class MapstructAnnotationUtils {
 
     @NotNull
     public static Stream<PsiAnnotation> findAllDefinedSubclassMappingAnnotations(@NotNull PsiModifierListOwner owner,
-                                                                                 boolean includeSuppliedByAnnotations) {
+                                                                                 boolean includeMetaAnnotations) {
+        if ( includeMetaAnnotations ) {
+            return findDirectAndMetaAnnotations2(owner, new HashSet<>())
+                    .stream().flatMap(MapstructAnnotationUtils::extractSubclassMappingAnnotations);
+        }
+
         return Arrays.stream( owner.getAnnotations() )
-                .flatMap( annotation -> extractSubclassMappingAnnotations( annotation, includeSuppliedByAnnotations ) );
+                .flatMap(MapstructAnnotationUtils::extractSubclassMappingAnnotations);
     }
 
     @NotNull
-    public static Stream<PsiAnnotation> extractSubclassMappingAnnotations(PsiAnnotation annotation,
-                                                                           boolean includeSuppliedByAnnotations) {
+    private static Stream<PsiAnnotation> extractSubclassMappingAnnotations(PsiAnnotation annotation) {
         if ( isSubclassMappingPsiAnnotation( annotation ) ) {
             return Stream.of( annotation );
         }
@@ -701,13 +705,27 @@ public class MapstructAnnotationUtils {
                     .filter( MapstructAnnotationUtils::isSubclassMappingPsiAnnotation )
                     .map( PsiAnnotation.class::cast );
         }
-        if ( includeSuppliedByAnnotations ) {
-            PsiClass annotationClass = annotation.resolveAnnotationType();
-            if ( annotationClass != null ) {
-                return findAllDefinedSubclassMappingAnnotations( annotationClass, true );
+        return Stream.empty();
+    }
+
+    @NotNull
+    private static Set<PsiAnnotation> findDirectAndMetaAnnotations2(@NotNull PsiModifierListOwner owner,
+                                                                   Set<? super PsiClass> visited) {
+
+        Set<PsiAnnotation> result = new HashSet<>();
+
+        // to avoid infinite loops, do not include meta annotations at this point
+        findAllDefinedSubclassMappingAnnotations( owner, false ).forEach( result::add );
+
+        List<PsiClass> annotationClasses = getResolvedClassesInAnnotationsList( owner );
+
+        for ( PsiClass annotationClass : annotationClasses ) {
+            if ( visited.add( annotationClass ) ) {
+                result.addAll( findDirectAndMetaAnnotations2( annotationClass, visited ) );
             }
         }
-        return Stream.empty();
+
+        return result;
     }
 
 }

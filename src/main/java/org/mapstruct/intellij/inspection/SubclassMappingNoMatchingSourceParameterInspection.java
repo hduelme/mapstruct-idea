@@ -5,11 +5,15 @@ import java.util.List;
 import java.util.Objects;
 
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.findAllDefinedSubclassMappingAnnotations;
+import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingPsiAnnotation;
+import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingsPsiAnnotation;
 import static org.mapstruct.intellij.util.MapstructUtil.getSourceParameters;
 import static org.mapstruct.intellij.util.TargetUtils.getTargetType;
 
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.JavaElementVisitor;
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiClassObjectAccessExpression;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiMethod;
@@ -60,7 +64,27 @@ public class SubclassMappingNoMatchingSourceParameterInspection extends Inspecti
                     } )
                     .forEach( subclassMappingWithoutSource ->
                             holder.registerProblem( subclassMappingWithoutSource, "No source" ) );
-            // TODO check provided by annotations
+            for ( PsiAnnotation annotation : method.getAnnotations() ) {
+                if ( isSubclassMappingsPsiAnnotation( annotation ) || isSubclassMappingPsiAnnotation( annotation ) ) {
+                    continue;
+                }
+                PsiClass annotationClass = annotation.resolveAnnotationType();
+                if ( annotationClass == null ) {
+                    continue;
+                }
+                findAllDefinedSubclassMappingAnnotations( annotationClass, true )
+                        .map( a -> a.findDeclaredAttributeValue( "source" ) )
+                        .filter( Objects::nonNull )
+                        .filter( source -> {
+                            if ( !( source instanceof PsiClassObjectAccessExpression sourceClass ) ) {
+                                return false;
+                            }
+                            PsiType sourceType = sourceClass.getOperand().getType();
+                            return  sourceParameterTypes.stream().noneMatch( t -> t.isAssignableFrom( sourceType ) );
+                        } )
+                        .forEach( subclassMappingWithoutSource ->
+                                holder.registerProblem( annotation, "No source2" ) );
+            }
         }
 
     }
