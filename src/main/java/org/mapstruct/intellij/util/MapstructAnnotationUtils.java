@@ -56,6 +56,8 @@ import static com.intellij.codeInsight.AnnotationUtil.findAnnotation;
 import static com.intellij.codeInsight.intention.AddAnnotationPsiFix.addPhysicalAnnotationTo;
 import static com.intellij.codeInsight.intention.AddAnnotationPsiFix.removePhysicalAnnotations;
 import static org.mapstruct.intellij.util.MapstructUtil.MAPPING_ANNOTATION_FQN;
+import static org.mapstruct.intellij.util.MapstructUtil.SUBCLASS_MAPPINGS_ANNOTATION_FQN;
+import static org.mapstruct.intellij.util.MapstructUtil.SUBCLASS_MAPPING_ANNOTATION_FQN;
 import static org.mapstruct.intellij.util.MapstructUtil.VALUE_MAPPING_ANNOTATION_FQN;
 
 /**
@@ -424,6 +426,46 @@ public class MapstructAnnotationUtils {
     }
 
     /**
+     * @param memberValue that needs to be checked
+     *
+     * @return {@code true} if the {@code memberValue} is the {@link org.mapstruct.SubclassMapping}
+     * {@link PsiAnnotation}, {@code false} otherwise
+     */
+    private static boolean isSubclassMappingPsiAnnotation(PsiAnnotationMemberValue memberValue) {
+        return memberValue instanceof PsiAnnotation psiAnnotation && isSubclassMappingAnnotation( psiAnnotation );
+    }
+
+    /**
+     * @param psiAnnotation that needs to be checked
+     *
+     * @return {@code true} if the {@code psiAnnotation} is the {@link org.mapstruct.SubclassMapping} annotation,
+     * {@code false} otherwise
+     */
+    private static boolean isSubclassMappingAnnotation(PsiAnnotation psiAnnotation) {
+        return SUBCLASS_MAPPING_ANNOTATION_FQN.equals( psiAnnotation.getQualifiedName() );
+    }
+
+    /**
+     * @param memberValue that needs to be checked
+     *
+     * @return {@code true} if the {@code memberValue} is the {@link org.mapstruct.SubclassMappings}
+     * {@link PsiAnnotation}, {@code false} otherwise
+     */
+    private static boolean isSubclassMappingsPsiAnnotation(PsiAnnotationMemberValue memberValue) {
+        return memberValue instanceof PsiAnnotation psiAnnotation && isSubclassMappingsAnnotation( psiAnnotation );
+    }
+
+    /**
+     * @param psiAnnotation that needs to be checked
+     *
+     * @return {@code true} if the {@code psiAnnotation} is the {@link org.mapstruct.SubclassMappings} annotation,
+     * {@code false} otherwise
+     */
+    private static boolean isSubclassMappingsAnnotation(PsiAnnotation psiAnnotation) {
+        return SUBCLASS_MAPPINGS_ANNOTATION_FQN.equals( psiAnnotation.getQualifiedName() );
+    }
+
+    /**
      * Find the mapper config reference class or interface defined in the {@code mapperAnnotation}
      *
      * @param mapperAnnotation the mapper annotation in which the mapper config is defined
@@ -638,6 +680,34 @@ public class MapstructAnnotationUtils {
 
         }
         return null;
+    }
+
+    @NotNull
+    public static Stream<PsiAnnotation> findAllDefinedSubclassMappingAnnotations(@NotNull PsiModifierListOwner owner,
+                                                                                 boolean includeSuppliedByAnnotations) {
+        return Arrays.stream( owner.getAnnotations() )
+                .flatMap( annotation -> extractSubclassMappingAnnotations( annotation, includeSuppliedByAnnotations ) );
+    }
+
+    @NotNull
+    public static Stream<PsiAnnotation> extractSubclassMappingAnnotations(PsiAnnotation annotation,
+                                                                           boolean includeSuppliedByAnnotations) {
+        if ( isSubclassMappingPsiAnnotation( annotation ) ) {
+            return Stream.of( annotation );
+        }
+        if ( isSubclassMappingsPsiAnnotation( annotation ) ) {
+            return arrayAttributeValues( annotation.findDeclaredAttributeValue( null ) )
+                    .stream()
+                    .filter( MapstructAnnotationUtils::isSubclassMappingPsiAnnotation )
+                    .map( PsiAnnotation.class::cast );
+        }
+        if ( includeSuppliedByAnnotations ) {
+            PsiClass annotationClass = annotation.resolveAnnotationType();
+            if ( annotationClass != null ) {
+                return findAllDefinedSubclassMappingAnnotations( annotationClass, true );
+            }
+        }
+        return Stream.empty();
     }
 
 }

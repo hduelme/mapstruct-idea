@@ -155,6 +155,30 @@
             key="inspection.mapstruct.references"
             shortName="MapstructReferenceInspection"
             implementationClass="org.mapstruct.intellij.inspection.MapstructReferenceInspection"/>
+      <localInspection
+              language="JAVA"
+              enabledByDefault="true"
+              level="WARNING"
+              bundle="org.mapstruct.intellij.messages.MapStructBundle"
+              key="inspection.subclass.mapping.illogical.order"
+              shortName="SubclassMappingIllogicalOrderInspection"
+              implementationClass="org.mapstruct.intellij.inspection.SubclassMappingIllogicalOrderInspection"/>
+      <localInspection
+              language="JAVA"
+              enabledByDefault="true"
+              level="ERROR"
+              bundle="org.mapstruct.intellij.messages.MapStructBundle"
+              key="inspection.subclass.mapping.no.matching.source.parameter"
+              shortName="SubclassMappingNoMatchingSourceParameterInspection"
+              implementationClass="org.mapstruct.intellij.inspection.SubclassMappingNoMatchingSourceParameterInspection"/>
+      <localInspection
+              language="JAVA"
+              enabledByDefault="true"
+              level="ERROR"
+              bundle="org.mapstruct.intellij.messages.MapStructBundle"
+              key="inspection.subclass.mapping.no.matching.source.parameter"
+              shortName="SubclassMappingNoValidSuperclassOfTargetInspection"
+              implementationClass="org.mapstruct.intellij.inspection.SubclassMappingNoValidSuperclassOfTargetInspection"/>
   </extensions>
 
   <actions>

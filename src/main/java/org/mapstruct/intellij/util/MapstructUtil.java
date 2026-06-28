@@ -61,6 +61,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Mappings;
 import org.mapstruct.Named;
+import org.mapstruct.SubclassMapping;
+import org.mapstruct.SubclassMappings;
 import org.mapstruct.ValueMapping;
 import org.mapstruct.ValueMappings;
 import org.mapstruct.factory.Mappers;
@@ -97,6 +99,9 @@ public class MapstructUtil {
     public static final String INHERIT_INVERSE_CONFIGURATION_FQN = InheritInverseConfiguration.class.getName();
 
     public static final String MAPPINGS_ANNOTATION_FQN = Mappings.class.getName();
+
+    public static final String SUBCLASS_MAPPING_ANNOTATION_FQN = SubclassMapping.class.getName();
+    public static final String SUBCLASS_MAPPINGS_ANNOTATION_FQN = SubclassMappings.class.getName();
 
     static final String VALUE_MAPPING_ANNOTATION_FQN = ValueMapping.class.getName();
     static final String VALUE_MAPPINGS_ANNOTATION_FQN = ValueMappings.class.getName();
