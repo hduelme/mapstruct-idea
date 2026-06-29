@@ -5,6 +5,7 @@
  */
 package org.mapstruct.intellij.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -714,14 +715,21 @@ public class MapstructAnnotationUtils {
     }
 
     @NotNull
-    private static Set<PsiAnnotation> findDirectAndMetaAnnotations2(@NotNull PsiModifierListOwner owner,
+    private static List<PsiAnnotation> findDirectAndMetaAnnotations2(@NotNull PsiModifierListOwner owner,
                                                                    Set<? super PsiClass> visited) {
 
-        Set<PsiAnnotation> result = new HashSet<>();
+        List<PsiAnnotation> result = new ArrayList<>();
 
         // to avoid infinite loops, do not include meta annotations at this point
         findAllDefinedSubclassMappingAnnotations( owner, false ).forEach( result::add );
 
+        result.addAll( findSubclassMetaAnnotations( owner, visited ) );
+
+        return result;
+    }
+
+    public static List<PsiAnnotation> findSubclassMetaAnnotations( @NotNull PsiModifierListOwner owner, Set<? super PsiClass> visited ) {
+        List<PsiAnnotation> result = new ArrayList<>();
         List<PsiClass> annotationClasses = getResolvedClassesInAnnotationsList( owner );
 
         for ( PsiClass annotationClass : annotationClasses ) {
@@ -729,7 +737,6 @@ public class MapstructAnnotationUtils {
                 result.addAll( findDirectAndMetaAnnotations2( annotationClass, visited ) );
             }
         }
-
         return result;
     }
 
