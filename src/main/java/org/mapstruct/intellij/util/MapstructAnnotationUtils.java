@@ -696,7 +696,7 @@ public class MapstructAnnotationUtils {
     }
 
     @NotNull
-    private static Stream<PsiAnnotation> extractSubclassMappingAnnotations(PsiAnnotation annotation) {
+    public static Stream<PsiAnnotation> extractSubclassMappingAnnotations(PsiAnnotation annotation) {
         if ( isSubclassMappingPsiAnnotation( annotation ) ) {
             return Stream.of( annotation );
         }
