@@ -700,12 +700,17 @@ public class MapstructAnnotationUtils {
             return Stream.of( annotation );
         }
         if ( isSubclassMappingsPsiAnnotation( annotation ) ) {
-            return arrayAttributeValues( annotation.findDeclaredAttributeValue( null ) )
-                    .stream()
-                    .filter( MapstructAnnotationUtils::isSubclassMappingPsiAnnotation )
-                    .map( PsiAnnotation.class::cast );
+            return extractSubclassMappingAnnotationsFromSubclassMappings( annotation );
         }
         return Stream.empty();
+    }
+
+    @NotNull
+    private static Stream<PsiAnnotation> extractSubclassMappingAnnotationsFromSubclassMappings( PsiAnnotation annotation ) {
+        return arrayAttributeValues( annotation.findDeclaredAttributeValue( null ) )
+                .stream()
+                .filter( MapstructAnnotationUtils::isSubclassMappingPsiAnnotation )
+                .map( PsiAnnotation.class::cast );
     }
 
     @NotNull
