@@ -155,6 +155,14 @@
             key="inspection.mapstruct.references"
             shortName="MapstructReferenceInspection"
             implementationClass="org.mapstruct.intellij.inspection.MapstructReferenceInspection"/>
+    <localInspection
+            language="JAVA"
+            enabledByDefault="true"
+            level="WARNING"
+            bundle="org.mapstruct.intellij.messages.MapStructBundle"
+            key="inspection.subclass.mapping.illogical.order"
+            shortName="SubclassMappingDoubleSourceSubclassInspection"
+            implementationClass="org.mapstruct.intellij.inspection.SubclassMappingDoubleSourceSubclassInspection"/>
       <localInspection
               language="JAVA"
               enabledByDefault="true"

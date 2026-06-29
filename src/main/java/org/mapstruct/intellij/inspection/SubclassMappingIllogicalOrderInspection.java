@@ -19,6 +19,7 @@ import com.intellij.psi.JavaElementVisitor;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiAnnotationMemberValue;
 import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiClassObjectAccessExpression;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiType;
@@ -54,21 +55,26 @@ public class SubclassMappingIllogicalOrderInspection extends InspectionBase {
                 return;
             }
 
-            for ( PsiAnnotation annotation : method.getAnnotations() ) {
+            Set<PsiType> seen = new HashSet<>();
+            findAllDefinedSubclassMappingAnnotations( method, true )
+                    .forEachOrdered( a -> {
+                        PsiAnnotationMemberValue source = a.findDeclaredAttributeValue( "source" );
+                        if ( !( source instanceof PsiClassObjectAccessExpression sourceClass ) ) {
+                            return;
+                        }
+                        PsiType sourceType = sourceClass.getOperand().getType();
+                        if (seen.contains( sourceType )) {
+                            // handeled else where
+                            return;
+                        }
+                        for (PsiType psiType : seen) {
+                            if (psiType.isAssignableFrom( sourceType )) {
+                                holder.registerProblem( a, "What? Order Wrong" );
+                            }
+                        }
+                        seen.add( sourceType );
+                    } );
 
-            }
-
-            Set<PsiClass> seen = new HashSet<>();
-
-            //findAllDefinedSubclassMappingAnnotations( method )
-
-        }
-
-        private static void handleSubclassMappingAnnotation(PsiAnnotation psiAnnotation) {
-            PsiAnnotationMemberValue source = psiAnnotation.findDeclaredAttributeValue("source");
-            if ( source == null ) {
-
-            }
         }
 
     }
