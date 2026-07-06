@@ -158,7 +158,7 @@
     <localInspection
             language="JAVA"
             enabledByDefault="true"
-            level="WARNING"
+            level="ERROR"
             bundle="org.mapstruct.intellij.messages.MapStructBundle"
             key="inspection.subclass.mapping.illogical.order"
             shortName="SubclassMappingDoubleSourceSubclassInspection"

@@ -12,12 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.mapstruct.intellij.util.MapstructAnnotationUtils.extractSubclassMappingAnnotations;
-import static org.mapstruct.intellij.util.MapstructAnnotationUtils.findAllDefinedSubclassMappingAnnotations;
-import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingPsiAnnotation;
-import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingsPsiAnnotation;
-import static org.mapstruct.intellij.util.TargetUtils.getTargetType;
-
 import com.intellij.codeInsight.intention.QuickFixFactory;
 import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.LocalQuickFixAndIntentionActionOnPsiElement;
@@ -49,7 +43,14 @@ import org.jetbrains.annotations.NotNull;
 import org.mapstruct.intellij.MapStructBundle;
 import org.mapstruct.intellij.util.MapstructUtil;
 
+import static org.mapstruct.intellij.util.MapstructAnnotationUtils.extractSubclassMappingAnnotations;
+import static org.mapstruct.intellij.util.MapstructAnnotationUtils.findAllDefinedSubclassMappingAnnotations;
+import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingPsiAnnotation;
+import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingsPsiAnnotation;
+import static org.mapstruct.intellij.util.TargetUtils.getTargetType;
+
 public class SubclassMappingDoubleSourceSubclassInspection extends InspectionBase {
+
     @NotNull
     @Override
     PsiElementVisitor buildVisitorInternal(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
@@ -76,29 +77,34 @@ public class SubclassMappingDoubleSourceSubclassInspection extends InspectionBas
                 return;
             }
             Map<PsiType, List<PsiElement>> problemMap = new HashMap<>();
-            for (PsiAnnotation psiAnnotation : method.getAnnotations()) {
-                if (isSubclassMappingPsiAnnotation( psiAnnotation )) {
+            for ( PsiAnnotation psiAnnotation : method.getAnnotations() ) {
+                if ( isSubclassMappingPsiAnnotation( psiAnnotation ) ) {
                     handleSubclassMappingAnnotation( psiAnnotation, problemMap );
                 }
-                else if (isSubclassMappingsPsiAnnotation( psiAnnotation )) {
-                    extractSubclassMappingAnnotations (psiAnnotation).forEach( p -> handleSubclassMappingAnnotation(p, problemMap ) );
-                } else {
-                    handleAnnotationWithMappingAnnotation(psiAnnotation, problemMap);
+                else if ( isSubclassMappingsPsiAnnotation( psiAnnotation ) ) {
+                    extractSubclassMappingAnnotations( psiAnnotation )
+                            .forEach( p -> handleSubclassMappingAnnotation( p, problemMap ) );
+                }
+                else {
+                    handleAnnotationWithMappingAnnotation( psiAnnotation, problemMap );
                 }
             }
             QuickFixFactory quickFixFactory = QuickFixFactory.getInstance();
             for ( Map.Entry<PsiType, List<PsiElement>> problem : problemMap.entrySet() ) {
                 List<PsiElement> problemElements = problem.getValue();
                 if ( problemElements.size() > 1 ) {
-                    for (PsiElement problemElement : problemElements) {
+                    for ( PsiElement problemElement : problemElements ) {
                         LocalQuickFix[] quickFixes = getLocalQuickFixes( problemElement, quickFixFactory );
-                        holder.registerProblem( problemElement, problem.getKey() + " Double" , quickFixes);
+                        holder.registerProblem( problemElement,
+                                MapStructBundle.message( "inspection.subclass.mapping.source.subclass.already.defined",
+                                problemElement.getText() ), quickFixes );
                     }
                 }
             }
         }
 
-        private static void handleSubclassMappingAnnotation( PsiAnnotation psiAnnotation, Map<PsiType, List<PsiElement>> problemMap ) {
+        private static void handleSubclassMappingAnnotation( PsiAnnotation psiAnnotation, Map<PsiType,
+                List<PsiElement>> problemMap ) {
             PsiAnnotationMemberValue source = psiAnnotation.findDeclaredAttributeValue( "source" );
             if ( !( source instanceof PsiClassObjectAccessExpression sourceClass ) ) {
                 return;
@@ -121,7 +127,7 @@ public class SubclassMappingDoubleSourceSubclassInspection extends InspectionBas
                         }
                         PsiType sourceType = sourceClass.getOperand().getType();
                         problemMap.computeIfAbsent( sourceType, k -> new ArrayList<>() ).add( psiAnnotation );
-                    });
+                    } );
         }
 
         private static @NotNull  LocalQuickFix[] getLocalQuickFixes(PsiElement problemElement,
@@ -155,8 +161,8 @@ public class SubclassMappingDoubleSourceSubclassInspection extends InspectionBas
 
             private ChangeTargetQuickFix(@NotNull PsiAnnotationMemberValue element) {
                 super( element );
-                myText = MapStructBundle.message( "intention.change.target.property" );
-                myFamilyName = MapStructBundle.message( "inspection.target.property.mapped.more.than.once",
+                myText = MapStructBundle.message( "intention.change.subclass.mapping.source.property" );
+                myFamilyName = MapStructBundle.message( "inspection.subclass.mapping.source.subclass.already.defined",
                         element.getText() );
             }
 

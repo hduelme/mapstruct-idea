@@ -63,8 +63,8 @@ public class SubclassMappingIllogicalOrderInspection extends InspectionBase {
                             return;
                         }
                         PsiType sourceType = sourceClass.getOperand().getType();
-                        if (seen.contains( sourceType )) {
-                            // handeled else where
+                        if ( seen.contains( sourceType ) ) {
+                            // handled in SubclassMappingDoubleSourceSubclassInspection
                             return;
                         }
                         for (PsiType psiType : seen) {
