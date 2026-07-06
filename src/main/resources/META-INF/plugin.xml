@@ -161,8 +161,8 @@
             level="ERROR"
             bundle="org.mapstruct.intellij.messages.MapStructBundle"
             key="inspection.subclass.mapping.illogical.order"
-            shortName="SubclassMappingDoubleSourceSubclassInspection"
-            implementationClass="org.mapstruct.intellij.inspection.SubclassMappingDoubleSourceSubclassInspection"/>
+            shortName="SubclassMappingSourceSubclassMappedMoreThanOnceInspection"
+            implementationClass="org.mapstruct.intellij.inspection.SubclassMappingSourceSubclassMappedMoreThanOnceInspection"/>
       <localInspection
               language="JAVA"
               enabledByDefault="true"

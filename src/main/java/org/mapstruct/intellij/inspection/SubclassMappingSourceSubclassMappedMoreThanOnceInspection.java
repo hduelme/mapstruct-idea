@@ -33,6 +33,7 @@ import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiAnnotationMemberValue;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiClassObjectAccessExpression;
+import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiFile;
@@ -49,7 +50,7 @@ import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMap
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingsPsiAnnotation;
 import static org.mapstruct.intellij.util.TargetUtils.getTargetType;
 
-public class SubclassMappingDoubleSourceSubclassInspection extends InspectionBase {
+public class SubclassMappingSourceSubclassMappedMoreThanOnceInspection extends InspectionBase {
 
     @NotNull
     @Override
@@ -76,7 +77,7 @@ public class SubclassMappingDoubleSourceSubclassInspection extends InspectionBas
             if ( targetType == null ) {
                 return;
             }
-            Map<PsiType, List<PsiElement>> problemMap = new HashMap<>();
+            Map<PsiClass, List<PsiElement>> problemMap = new HashMap<>();
             for ( PsiAnnotation psiAnnotation : method.getAnnotations() ) {
                 if ( isSubclassMappingPsiAnnotation( psiAnnotation ) ) {
                     handleSubclassMappingAnnotation( psiAnnotation, problemMap );
@@ -90,31 +91,37 @@ public class SubclassMappingDoubleSourceSubclassInspection extends InspectionBas
                 }
             }
             QuickFixFactory quickFixFactory = QuickFixFactory.getInstance();
-            for ( Map.Entry<PsiType, List<PsiElement>> problem : problemMap.entrySet() ) {
+            for ( Map.Entry<PsiClass, List<PsiElement>> problem : problemMap.entrySet() ) {
                 List<PsiElement> problemElements = problem.getValue();
                 if ( problemElements.size() > 1 ) {
                     for ( PsiElement problemElement : problemElements ) {
                         LocalQuickFix[] quickFixes = getLocalQuickFixes( problemElement, quickFixFactory );
                         holder.registerProblem( problemElement,
                                 MapStructBundle.message( "inspection.subclass.mapping.source.subclass.already.defined",
-                                problemElement.getText() ), quickFixes );
+                                        problem.getKey().getQualifiedName() ), quickFixes );
                     }
                 }
             }
         }
 
-        private static void handleSubclassMappingAnnotation( PsiAnnotation psiAnnotation, Map<PsiType,
+        private static void handleSubclassMappingAnnotation( PsiAnnotation psiAnnotation, Map<PsiClass,
                 List<PsiElement>> problemMap ) {
             PsiAnnotationMemberValue source = psiAnnotation.findDeclaredAttributeValue( "source" );
             if ( !( source instanceof PsiClassObjectAccessExpression sourceClass ) ) {
                 return;
             }
             PsiType sourceType = sourceClass.getOperand().getType();
-            problemMap.computeIfAbsent( sourceType, s -> new ArrayList<>() ).add( source );
+            if ( sourceType instanceof PsiClassType classType ) {
+                PsiClass psiClass = classType.resolve();
+                if ( psiClass == null ) {
+                    return;
+                }
+                problemMap.computeIfAbsent( psiClass, s -> new ArrayList<>() ).add( source );
+            }
         }
 
         private void handleAnnotationWithMappingAnnotation(PsiAnnotation psiAnnotation,
-                                                           Map<PsiType, List<PsiElement>> problemMap) {
+                                                           Map<PsiClass, List<PsiElement>> problemMap) {
             PsiClass annotationClass = psiAnnotation.resolveAnnotationType();
             if ( annotationClass == null ) {
                 return;
@@ -126,7 +133,13 @@ public class SubclassMappingDoubleSourceSubclassInspection extends InspectionBas
                             return;
                         }
                         PsiType sourceType = sourceClass.getOperand().getType();
-                        problemMap.computeIfAbsent( sourceType, k -> new ArrayList<>() ).add( psiAnnotation );
+                        if ( sourceType instanceof PsiClassType classType ) {
+                            PsiClass psiClass = classType.resolve();
+                            if ( psiClass == null ) {
+                                return;
+                            }
+                            problemMap.computeIfAbsent( psiClass, k -> new ArrayList<>() ).add( psiAnnotation );
+                        }
                     } );
         }
 
