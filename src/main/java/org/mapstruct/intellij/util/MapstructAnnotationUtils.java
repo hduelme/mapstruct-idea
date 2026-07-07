@@ -326,10 +326,10 @@ public class MapstructAnnotationUtils {
             return findDirectAndMetaAnnotations( method, new HashSet<>() ).stream();
         }
 
-        return Stream.of( method.getModifierList() )
-            .filter( Objects::nonNull )
-            .flatMap( psiModifierList -> Arrays.stream( psiModifierList.getAnnotations() ) )
-            .filter( MapstructAnnotationUtils::isMappingAnnotation );
+        return Optional.ofNullable( method.getModifierList() )
+                .map( PsiModifierList::getAnnotations ).stream()
+                .flatMap( Arrays::stream )
+                .filter( MapstructAnnotationUtils::isMappingAnnotation );
     }
 
     @NotNull
@@ -366,24 +366,30 @@ public class MapstructAnnotationUtils {
         return Collections.emptyList();
     }
 
-    public static Stream<PsiAnnotation> findAllDefinedValueMappingAnnotations(@NotNull PsiMethod method) {
-        Stream<PsiAnnotation> valueMappingsAnnotations = Stream.empty();
+    public static Stream<PsiAnnotation> findAllDefinedValueMappingAnnotations(@NotNull PsiModifierListOwner method) {
         PsiAnnotation valueMappings = findAnnotation( method, true, MapstructUtil.VALUE_MAPPINGS_ANNOTATION_FQN );
-        if ( valueMappings != null ) {
-            valueMappingsAnnotations = arrayAttributeValues( valueMappings.findDeclaredAttributeValue( null ) )
-                .stream()
-                .filter( MapstructAnnotationUtils::isValueMappingPsiAnnotation )
-                .map( PsiAnnotation.class::cast );
-        }
-
+        Stream<PsiAnnotation> valueMappingsAnnotations = extractValueMappingAnnotationsFromMappings( valueMappings );
         Stream<PsiAnnotation> valueMappingAnnotations = findValueMappingAnnotations( method );
 
         return Stream.concat( valueMappingAnnotations, valueMappingsAnnotations );
     }
 
-    private static Stream<PsiAnnotation> findValueMappingAnnotations(@NotNull PsiMethod method) {
-        return Stream.of( method.getModifierList().getAnnotations() )
-            .filter( MapstructAnnotationUtils::isValueMappingAnnotation );
+    @NotNull
+    public static Stream<PsiAnnotation> extractValueMappingAnnotationsFromMappings(@Nullable PsiAnnotation mappings) {
+        if ( mappings == null ) {
+            return Stream.empty();
+        }
+        return arrayAttributeValues( mappings.findDeclaredAttributeValue( null ) )
+                .stream()
+                .filter( MapstructAnnotationUtils::isValueMappingPsiAnnotation )
+                .map( PsiAnnotation.class::cast );
+    }
+
+    private static Stream<PsiAnnotation> findValueMappingAnnotations(@NotNull PsiModifierListOwner method) {
+        return Optional.ofNullable( method.getModifierList() )
+                .map( PsiModifierList::getAnnotations ).stream()
+                .flatMap( Arrays::stream )
+                .filter( MapstructAnnotationUtils::isValueMappingAnnotation );
     }
 
     /**

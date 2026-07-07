@@ -109,7 +109,7 @@ public class SubclassMappingSourceSubclassMappedMoreThanOnceInspection
 
         private ChangeTargetQuickFix(@NotNull PsiAnnotationMemberValue element) {
             super( element );
-            myText = MapStructBundle.message( "intention.change.subclass.mapping.source.property" );
+            myText = MapStructBundle.message( "intention.change.source.property" );
             myFamilyName = MapStructBundle.message( "inspection.subclass.mapping.source.subclass.already.defined",
                     element.getText() );
         }

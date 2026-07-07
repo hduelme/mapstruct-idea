@@ -103,8 +103,8 @@ public class MapstructUtil {
     public static final String SUBCLASS_MAPPING_ANNOTATION_FQN = SubclassMapping.class.getName();
     public static final String SUBCLASS_MAPPINGS_ANNOTATION_FQN = SubclassMappings.class.getName();
 
-    static final String VALUE_MAPPING_ANNOTATION_FQN = ValueMapping.class.getName();
-    static final String VALUE_MAPPINGS_ANNOTATION_FQN = ValueMappings.class.getName();
+    public static final String VALUE_MAPPING_ANNOTATION_FQN = ValueMapping.class.getName();
+    public static final String VALUE_MAPPINGS_ANNOTATION_FQN = ValueMappings.class.getName();
     private static final String MAPPING_TARGET_ANNOTATION_FQN = MappingTarget.class.getName();
     private static final String CONTEXT_ANNOTATION_FQN = Context.class.getName();
     private static final String BUILDER_ANNOTATION_FQN = Builder.class.getName();

@@ -187,6 +187,14 @@
               key="inspection.subclass.mapping.no.matching.source.parameter"
               shortName="SubclassMappingNoValidSuperclassOfTargetInspection"
               implementationClass="org.mapstruct.intellij.inspection.SubclassMappingNoValidSuperclassOfTargetInspection"/>
+      <localInspection
+              language="JAVA"
+              enabledByDefault="true"
+              level="ERROR"
+              bundle="org.mapstruct.intellij.messages.MapStructBundle"
+              key="inspection.value.mapping.source.mapped.more.than.once.title"
+              shortName="ValueMappingSourceMappedMoreThanOnceInspection"
+              implementationClass="org.mapstruct.intellij.inspection.ValueMappingSourceMappedMoreThanOnceInspection"/>
   </extensions>
 
   <actions>

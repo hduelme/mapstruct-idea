@@ -1,6 +1,7 @@
 package org.mapstruct.intellij.inspection;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,13 +11,27 @@ import java.util.stream.Stream;
 import com.intellij.codeInsight.intention.QuickFixFactory;
 import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.LocalQuickFixAndIntentionActionOnPsiElement;
+import com.intellij.codeInspection.LocalQuickFixOnPsiElement;
 import com.intellij.codeInspection.ProblemsHolder;
+import com.intellij.codeInspection.util.IntentionFamilyName;
+import com.intellij.codeInspection.util.IntentionName;
+import com.intellij.openapi.editor.CaretState;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.LogicalPosition;
+import com.intellij.openapi.editor.ScrollType;
+import com.intellij.openapi.fileEditor.FileEditor;
+import com.intellij.openapi.fileEditor.FileEditorManager;
+import com.intellij.openapi.fileEditor.TextEditor;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.TextRange;
+import com.intellij.openapi.util.text.Strings;
 import com.intellij.psi.JavaElementVisitor;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiAnnotationMemberValue;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiModifierListOwner;
 import com.intellij.psi.PsiType;
@@ -165,5 +180,62 @@ public abstract class MoreThanOnceMappedAnnotationInspectionBase<K> extends Insp
     @NotNull
     protected abstract Stream<PsiAnnotation> extractAnnotationsFromRepeatableMappingsAnnotation(
             @NotNull  PsiAnnotation mappings);
+
+    protected static class ChangeTargetStringQuickFixBase extends LocalQuickFixOnPsiElement {
+
+        private final String myText;
+        private final String myFamilyName;
+
+        protected ChangeTargetStringQuickFixBase(@NotNull PsiAnnotationMemberValue element,
+                                                 @NotNull String myText, @NotNull String myFamilyName) {
+            super( element );
+            this.myText = myText;
+            this.myFamilyName = myFamilyName;
+        }
+
+        @Override
+        public @IntentionName @NotNull String getText() {
+            return myText;
+        }
+
+        @Override
+        public void invoke(@NotNull Project project, @NotNull PsiFile psiFile, @NotNull PsiElement psiElement,
+                           @NotNull PsiElement psiElement1) {
+            FileEditor selectedEditor = FileEditorManager.getInstance( project ).getSelectedEditor();
+            if ( selectedEditor instanceof TextEditor textEditor ) {
+                Editor editor = textEditor.getEditor();
+
+                TextRange textRange = psiElement.getTextRange();
+                String textOfElement = String.valueOf( editor.getDocument()
+                        .getCharsSequence()
+                        .subSequence( textRange.getStartOffset(), textRange.getEndOffset() ) );
+                int targetStart = Strings.indexOf( textOfElement, "\"" ) + 1;
+                int targetEnd = textOfElement.lastIndexOf( "\"" );
+
+                editor.getCaretModel().moveToOffset( textRange.getStartOffset() + targetStart );
+                LogicalPosition startPosition = editor.getCaretModel().getLogicalPosition();
+                editor.getCaretModel().moveToOffset( textRange.getStartOffset() + targetEnd );
+                editor.getCaretModel().setCaretsAndSelections(
+                        Collections.singletonList( new CaretState(startPosition, startPosition,
+                                editor.getCaretModel().getLogicalPosition() ) ) );
+                editor.getScrollingModel().scrollToCaret( ScrollType.MAKE_VISIBLE );
+            }
+        }
+
+        @Override
+        public @IntentionFamilyName @NotNull String getFamilyName() {
+            return myFamilyName;
+        }
+
+        @Override
+        public boolean availableInBatchMode() {
+            return false;
+        }
+
+        @Override
+        public boolean startInWriteAction() {
+            return false;
+        }
+    }
 
 }
