@@ -5,18 +5,12 @@
  */
 package org.mapstruct.intellij.inspection;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
-import com.intellij.codeInsight.intention.QuickFixFactory;
 import com.intellij.codeInspection.LocalQuickFix;
-import com.intellij.codeInspection.LocalQuickFixAndIntentionActionOnPsiElement;
 import com.intellij.codeInspection.LocalQuickFixOnPsiElement;
-import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.codeInspection.util.IntentionFamilyName;
 import com.intellij.codeInspection.util.IntentionName;
 import com.intellij.openapi.editor.CaretState;
@@ -28,191 +22,130 @@ import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.TextEditor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
-import com.intellij.psi.JavaElementVisitor;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiAnnotationMemberValue;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiClassObjectAccessExpression;
 import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiModifierListOwner;
 import com.intellij.psi.PsiType;
-import com.intellij.psi.impl.source.tree.java.PsiAnnotationImpl;
 import org.jetbrains.annotations.NotNull;
 import org.mapstruct.intellij.MapStructBundle;
-import org.mapstruct.intellij.util.MapstructUtil;
+import org.mapstruct.intellij.util.MapStructVersion;
 
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.extractSubclassMappingAnnotations;
 import static org.mapstruct.intellij.util.MapstructAnnotationUtils.findAllDefinedSubclassMappingAnnotations;
-import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingPsiAnnotation;
-import static org.mapstruct.intellij.util.MapstructAnnotationUtils.isSubclassMappingsPsiAnnotation;
-import static org.mapstruct.intellij.util.TargetUtils.getTargetType;
+import static org.mapstruct.intellij.util.MapstructUtil.SUBCLASS_MAPPINGS_ANNOTATION_FQN;
+import static org.mapstruct.intellij.util.MapstructUtil.SUBCLASS_MAPPING_ANNOTATION_FQN;
 
-public class SubclassMappingSourceSubclassMappedMoreThanOnceInspection extends InspectionBase {
+/**
+ * @author hduelme
+ */
+public class SubclassMappingSourceSubclassMappedMoreThanOnceInspection
+        extends MoreThanOnceMappedAnnotationInspectionBase<PsiClass> {
 
     @NotNull
     @Override
-    PsiElementVisitor buildVisitorInternal(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
-        return new MyJavaElementVisitor( holder );
+    protected String getSingleMappingAnnotationFqn() {
+        return SUBCLASS_MAPPING_ANNOTATION_FQN;
     }
 
-    private static class MyJavaElementVisitor extends JavaElementVisitor {
-        private final ProblemsHolder holder;
+    @NotNull
+    @Override
+    protected String getRepeatableMappingsAnnotationFqn() {
+        return SUBCLASS_MAPPINGS_ANNOTATION_FQN;
+    }
 
-        private MyJavaElementVisitor(ProblemsHolder holder) {
-            this.holder = holder;
+    @NotNull
+    @Override
+    protected String getAttributeName() {
+        return "source";
+    }
+
+    @NotNull
+    @Override
+    protected Stream<PsiAnnotation> findAllDefinedMappings(@NotNull PsiModifierListOwner owner,
+                                                           @NotNull MapStructVersion mapStructVersion) {
+        return findAllDefinedSubclassMappingAnnotations( owner, true );
+    }
+
+    @Override
+    protected Optional<PsiClass> extractCompareKeyFromAnnotationMember(
+            @NotNull PsiAnnotationMemberValue annotationMemberValue) {
+        if ( !( annotationMemberValue instanceof PsiClassObjectAccessExpression sourceClass ) ) {
+            return Optional.empty();
+        }
+        PsiType sourceType = sourceClass.getOperand().getType();
+        if ( sourceType instanceof PsiClassType classType ) {
+            return Optional.ofNullable( classType.resolve() );
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    protected LocalQuickFix getChangeTargetQuickFix(@NotNull PsiAnnotationMemberValue problemPsiAnnotationMemberValue) {
+        return new ChangeTargetQuickFix( problemPsiAnnotationMemberValue );
+    }
+
+    @Override
+    protected String getProblemDescription(@NotNull PsiClass problemKey) {
+        return MapStructBundle.message( "inspection.subclass.mapping.source.subclass.already.defined",
+                problemKey.getQualifiedName() );
+    }
+
+    @NotNull
+    @Override
+    protected Stream<PsiAnnotation> extractAnnotationsFromRepeatableMappingsAnnotation(
+            @NotNull PsiAnnotation mappings) {
+        return extractSubclassMappingAnnotations( mappings );
+    }
+
+    private static class ChangeTargetQuickFix extends LocalQuickFixOnPsiElement {
+
+        private final String myText;
+        private final String myFamilyName;
+
+        private ChangeTargetQuickFix(@NotNull PsiAnnotationMemberValue element) {
+            super( element );
+            myText = MapStructBundle.message( "intention.change.subclass.mapping.source.property" );
+            myFamilyName = MapStructBundle.message( "inspection.subclass.mapping.source.subclass.already.defined",
+                    element.getText() );
         }
 
         @Override
-        public void visitMethod(@NotNull PsiMethod method) {
-            super.visitMethod( method );
+        public @IntentionName @NotNull String getText() {
+            return myText;
+        }
 
-            if ( !MapstructUtil.isMapper( method.getContainingClass() ) ) {
-                return;
-            }
+        @Override
+        public void invoke(@NotNull Project project, @NotNull PsiFile psiFile, @NotNull PsiElement psiElement,
+                           @NotNull PsiElement psiElement1) {
+            FileEditor selectedEditor = FileEditorManager.getInstance( project ).getSelectedEditor();
+            if ( selectedEditor instanceof TextEditor textEditor ) {
+                Editor editor = textEditor.getEditor();
 
-            PsiType targetType = getTargetType( method );
-            if ( targetType == null ) {
-                return;
-            }
-            Map<PsiClass, List<PsiElement>> problemMap = new HashMap<>();
-            for ( PsiAnnotation psiAnnotation : method.getAnnotations() ) {
-                if ( isSubclassMappingPsiAnnotation( psiAnnotation ) ) {
-                    handleSubclassMappingAnnotation( psiAnnotation, problemMap );
-                }
-                else if ( isSubclassMappingsPsiAnnotation( psiAnnotation ) ) {
-                    extractSubclassMappingAnnotations( psiAnnotation )
-                            .forEach( p -> handleSubclassMappingAnnotation( p, problemMap ) );
-                }
-                else {
-                    handleAnnotationWithMappingAnnotation( psiAnnotation, problemMap );
-                }
-            }
-            QuickFixFactory quickFixFactory = QuickFixFactory.getInstance();
-            for ( Map.Entry<PsiClass, List<PsiElement>> problem : problemMap.entrySet() ) {
-                List<PsiElement> problemElements = problem.getValue();
-                if ( problemElements.size() > 1 ) {
-                    for ( PsiElement problemElement : problemElements ) {
-                        LocalQuickFix[] quickFixes = getLocalQuickFixes( problemElement, quickFixFactory );
-                        holder.registerProblem( problemElement,
-                                MapStructBundle.message( "inspection.subclass.mapping.source.subclass.already.defined",
-                                        problem.getKey().getQualifiedName() ), quickFixes );
-                    }
-                }
+                TextRange textRange = ((PsiClassObjectAccessExpression) psiElement).getOperand().getTextRange();
+
+                editor.getCaretModel().moveToOffset( textRange.getStartOffset() );
+                LogicalPosition startPosition = editor.getCaretModel().getLogicalPosition();
+                editor.getCaretModel().moveToOffset( textRange.getEndOffset() );
+                editor.getCaretModel().setCaretsAndSelections(
+                        Collections.singletonList( new CaretState(startPosition, startPosition,
+                                editor.getCaretModel().getLogicalPosition() ) ) );
+                editor.getScrollingModel().scrollToCaret( ScrollType.MAKE_VISIBLE );
             }
         }
 
-        private static void handleSubclassMappingAnnotation( PsiAnnotation psiAnnotation, Map<PsiClass,
-                List<PsiElement>> problemMap ) {
-            PsiAnnotationMemberValue source = psiAnnotation.findDeclaredAttributeValue( "source" );
-            if ( !( source instanceof PsiClassObjectAccessExpression sourceClass ) ) {
-                return;
-            }
-            PsiType sourceType = sourceClass.getOperand().getType();
-            if ( sourceType instanceof PsiClassType classType ) {
-                PsiClass psiClass = classType.resolve();
-                if ( psiClass == null ) {
-                    return;
-                }
-                problemMap.computeIfAbsent( psiClass, s -> new ArrayList<>() ).add( source );
-            }
+        @Override
+        public @IntentionFamilyName @NotNull String getFamilyName() {
+            return myFamilyName;
         }
 
-        private void handleAnnotationWithMappingAnnotation(PsiAnnotation psiAnnotation,
-                                                           Map<PsiClass, List<PsiElement>> problemMap) {
-            PsiClass annotationClass = psiAnnotation.resolveAnnotationType();
-            if ( annotationClass == null ) {
-                return;
-            }
-            findAllDefinedSubclassMappingAnnotations( annotationClass, true )
-                    .forEach( a -> {
-                        PsiAnnotationMemberValue source = a.findDeclaredAttributeValue( "source" );
-                        if ( !( source instanceof PsiClassObjectAccessExpression sourceClass ) ) {
-                            return;
-                        }
-                        PsiType sourceType = sourceClass.getOperand().getType();
-                        if ( sourceType instanceof PsiClassType classType ) {
-                            PsiClass psiClass = classType.resolve();
-                            if ( psiClass == null ) {
-                                return;
-                            }
-                            problemMap.computeIfAbsent( psiClass, k -> new ArrayList<>() ).add( psiAnnotation );
-                        }
-                    } );
+        @Override
+        public boolean availableInBatchMode() {
+            return false;
         }
-
-        private static @NotNull  LocalQuickFix[] getLocalQuickFixes(PsiElement problemElement,
-                                                                    QuickFixFactory quickFixFactory) {
-            List<LocalQuickFix> quickFixes = new ArrayList<>(2);
-            if ( problemElement instanceof PsiAnnotation ) {
-                quickFixes.add( getDeleteFix( problemElement, quickFixFactory ) );
-            }
-            else if ( problemElement instanceof PsiAnnotationMemberValue problemPsiAnnotationMemberValue ) {
-                Optional.ofNullable( problemElement.getParent() ).map( PsiElement::getParent )
-                        .map( PsiElement::getParent ).filter( PsiAnnotation.class::isInstance )
-                        .ifPresent( annotation -> quickFixes.add(
-                                getDeleteFix( annotation, quickFixFactory ) ) );
-                quickFixes.add( new ChangeTargetQuickFix( problemPsiAnnotationMemberValue ) );
-            }
-            return quickFixes.toArray( new LocalQuickFix[]{} );
-        }
-
-        private static @NotNull LocalQuickFixAndIntentionActionOnPsiElement getDeleteFix(
-                @NotNull PsiElement problemElement, @NotNull QuickFixFactory quickFixFactory) {
-
-            String annotationName = PsiAnnotationImpl.getAnnotationShortName( problemElement.getText() );
-            return quickFixFactory.createDeleteFix( problemElement,
-                    MapStructBundle.message( "intention.remove.annotation", annotationName ) );
-        }
-
-        private static class ChangeTargetQuickFix extends LocalQuickFixOnPsiElement {
-
-            private final String myText;
-            private final String myFamilyName;
-
-            private ChangeTargetQuickFix(@NotNull PsiAnnotationMemberValue element) {
-                super( element );
-                myText = MapStructBundle.message( "intention.change.subclass.mapping.source.property" );
-                myFamilyName = MapStructBundle.message( "inspection.subclass.mapping.source.subclass.already.defined",
-                        element.getText() );
-            }
-
-            @Override
-            public @IntentionName @NotNull String getText() {
-                return myText;
-            }
-
-            @Override
-            public void invoke(@NotNull Project project, @NotNull PsiFile psiFile, @NotNull PsiElement psiElement,
-                               @NotNull PsiElement psiElement1) {
-                FileEditor selectedEditor = FileEditorManager.getInstance( project ).getSelectedEditor();
-                if ( selectedEditor instanceof TextEditor textEditor ) {
-                    Editor editor = textEditor.getEditor();
-
-                    TextRange textRange = ((PsiClassObjectAccessExpression) psiElement).getOperand().getTextRange();
-
-                    editor.getCaretModel().moveToOffset( textRange.getStartOffset() );
-                    LogicalPosition startPosition = editor.getCaretModel().getLogicalPosition();
-                    editor.getCaretModel().moveToOffset( textRange.getEndOffset() );
-                    editor.getCaretModel().setCaretsAndSelections(
-                            Collections.singletonList( new CaretState(startPosition, startPosition,
-                                    editor.getCaretModel().getLogicalPosition() ) ) );
-                    editor.getScrollingModel().scrollToCaret( ScrollType.MAKE_VISIBLE );
-                }
-            }
-
-            @Override
-            public @IntentionFamilyName @NotNull String getFamilyName() {
-                return myFamilyName;
-            }
-
-            @Override
-            public boolean availableInBatchMode() {
-                return false;
-            }
-        }
-
     }
 }
